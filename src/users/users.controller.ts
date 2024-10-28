@@ -7,7 +7,9 @@ import {
         Param, 
         Patch, 
         Post, 
-        Query
+        Query,
+        Session,
+        UseInterceptors
     } from '@nestjs/common';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -15,25 +17,48 @@ import { UsersService } from './users.service';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { UserDto } from './dtos/user.dto';
 import { AuthService } from './auth.service';
+import { User } from './user.entity';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { CurrentUserInterceptor } from './interceptors/current-user.interceptor';
 
 @Controller('auth')
 @Serialize(UserDto)
+@UseInterceptors(CurrentUserInterceptor)
 export class UsersController {
 
     constructor(
         private usersService: UsersService,
         private authService: AuthService) {}
 
+ 
+    // @Get('whoAmI')
+    // whoAmI(@Session() session: any) {
+    //     return this.usersService.findOne(session.userId)
+    // }
+
+    @Get('whoAmI')
+    whoAmI(@CurrentUser() user: User) {
+        return user
+    }
+
     @Post('/signup')
-    createUuser(@Body() body: CreateUserDto) {
-        return this.authService.signUp(body.email, body.password)
+    async createUuser(@Body() body: CreateUserDto, @Session() session: any) {
+        const user = await this.authService.signUp(body.email, body.password)
+        session.userId = user.id
+        return user
     }
 
     @Post('/signin')
-    signIn(@Body() body: CreateUserDto) {
-        return this.authService.signIn(body.email, body.password)
+    async signIn(@Body() body: CreateUserDto, @Session() session: any) {
+        const user =  await this.authService.signIn(body.email, body.password)
+        session.userId = user.id
+        return user
     }
 
+    @Post('/signout')
+    signOut(@Session() session: any) {
+        session.userId = null
+    }
 
     @Get('/:id')
     async findUser(@Param('id') id: string) {

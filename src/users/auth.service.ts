@@ -26,13 +26,11 @@ export class AuthService {
     }
 
     async signIn(email: string, password: string) {
-        console.log('signIn');
         
         const [user] = await this.usersService.find(email)
         if(!user) {
             throw new NotFoundException('user not found')
         }
-console.log(user);
 
         const [salt, storedHash] = user.password.split('.')
         const hash = (await scrypt(password, salt, 32)) as Buffer
